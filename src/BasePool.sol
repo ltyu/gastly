@@ -9,9 +9,6 @@ contract BasePool {
     // total assets in this pool
     uint256 public assetAmount;
 
-    // The last known (and possibly outdated) bandwidth of the other pool
-    uint256 public lastKnownRootBandwidth;
-
     // The max bridgable amount
     uint256 public bandwidth;
 
@@ -19,11 +16,7 @@ contract BasePool {
         assetAmount += amount;
         bandwidth += amount;
         targetStable.transferFrom(msg.sender, address(this), amount);
-    }
 
-    // Only admin function that sets lastKnownRootBandwidth. Should match the bandwidth on the Root Pool
-    // @dev currently open to any caller for hackathon
-    function setLastKnownRootBandwidth(uint256 _bandwidth) external {
-        lastKnownRootBandwidth = _bandwidth;
+        // Updates the other pool's lastKnownBandwidth
     }
 }

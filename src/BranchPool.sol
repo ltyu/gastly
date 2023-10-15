@@ -25,7 +25,7 @@ contract BranchPool is BasePool {
     // Deposits the stable and credit the receiver cross-chain
     function bridgeGas(uint256 _amount, address _receiver) external payable {
         // Check if theres enough bandwidth
-        require(bandwidth >= _amount, "No badwidth");
+        require(bandwidth >= _amount, "No bandwidth");
 
         // Calculate fee using root pool bandwidth
         // e.g. if utilization is 100%, require that the fee be 50%
@@ -36,7 +36,6 @@ contract BranchPool is BasePool {
         require(msg.value >= gasCost);
 
         bandwidth -= _amount;
-        lastKnownRootBandwidth += _amount;
 
         bytes memory payload = abi.encode(_receiver, _amount);
         wormholeRelayer.sendPayloadToEvm{value: gasCost}(

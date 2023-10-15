@@ -5,9 +5,6 @@ import {RootPool} from "../../src/RootPool.sol";
 
 contract MockWormholeRelayer is IWormholeRelayer{
     RootPool public rootPool;
-    constructor(address _rootPool) {
-        rootPool = RootPool(_rootPool);
-    }
     
     function deliver(
         bytes[] memory encodedVMs,
@@ -31,6 +28,10 @@ contract MockWormholeRelayer is IWormholeRelayer{
     ) external payable returns (uint64 sequence) {
         bytes[] memory byteArray;
         rootPool.receiveWormholeMessages(payload, byteArray, keccak256(""), 1, keccak256(""));
+    }
+
+    function setRootPool(address _rootPool) external {
+        rootPool = RootPool(_rootPool);
     }
 
     function sendPayloadToEvm(
