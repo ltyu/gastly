@@ -28,8 +28,8 @@ contract RootPool is IWormholeReceiver, BasePool {
     function receiveWormholeMessages(
         bytes memory payload,
         bytes[] memory,
-        bytes32 sourceAddress, // address that called 'sendPayloadToEvm' (HelloWormhole contract address)
-        uint16 sourceChain,
+        bytes32, // address that called 'sendPayloadToEvm'
+        uint16, // source chain
         bytes32 deliveryHash
     ) external payable {
         require(msg.sender == address(wormholeRelayer), "Only relayer allowed");
@@ -38,7 +38,8 @@ contract RootPool is IWormholeReceiver, BasePool {
         require(!seenDeliveryVaaHashes[deliveryHash], "Message already processed");
         seenDeliveryVaaHashes[deliveryHash] = true;
 
-        (address receiver, uint256 amount) = abi.decode(payload, (address, uint256));
+        (uint256 action, address receiver, uint256 amount) = abi.decode(payload, (uint256, address, uint256));
+        
         bandwidth += amount;
         depositToRelayer(receiver, amount);
     }

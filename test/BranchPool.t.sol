@@ -39,6 +39,7 @@ contract BranchPoolTest is Test {
         targetStable.approve(address(branchPool), 1 ether);
         branchPool.bridgeGas(1 ether, alice);
         assertEq(targetStable.balanceOf(address(branchPool)), 2 ether);
+
         assertEq(branchPool.bandwidth(), 0);
     }
 
