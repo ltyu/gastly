@@ -6,10 +6,11 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 contract BasePool {
     using SafeERC20 for IERC20;
 
-    address immutable deployer;
+    address public immutable deployer;
 
     // stablecoin address that this contract holds (probably, USDC). if address(0), then native gas is expected.
-    address immutable targetGas;
+    // @dev can be immutable post-hackathon
+    address public targetGas;
 
     // total assets in this pool
     uint256 public assetAmount;
@@ -39,12 +40,12 @@ contract BasePool {
     }
 
     // @dev helper function to withdraw all liquidity. only used during hackathon to reclaim tokens
-    function withdrawLiquidity() external onlyDeployer {
+    function withdrawLiquidity(address receiver) external onlyDeployer {
         if (targetGas == address(0)) { 
-            (bool success, ) = msg.sender.call{ value: address(this).balance }("");
+            (bool success, ) = receiver.call{ value: address(this).balance }("");
             require(success, "withdrawLiquidityFailed");
         } else {
-            IERC20(targetGas).safeTransfer(msg.sender, IERC20(targetGas).balanceOf(address(this)));
+            IERC20(targetGas).safeTransfer(receiver, IERC20(targetGas).balanceOf(address(this)));
         }
     }
 

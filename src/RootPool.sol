@@ -11,7 +11,7 @@ import "./interface/IGelato1Balance.sol";
 contract RootPool is IWormholeReceiver, BasePool {
     address public branchPool;
     address public wormholeRelayer;
-    IGelato1Balance gelato1Balance;
+    IGelato1Balance public gelato1Balance;
     mapping(bytes32 => bool) seenDeliveryVaaHashes;
 
     constructor(address _targetGas, address _wormholeRelayer, address _gelato1Balance) {
@@ -19,10 +19,10 @@ contract RootPool is IWormholeReceiver, BasePool {
         wormholeRelayer = _wormholeRelayer;
         gelato1Balance = IGelato1Balance(_gelato1Balance);
     }
-    // Sets the branch Pool
-    // @dev not admin for hackathon
-    function setBranchPool(address _branchPool) public {
+    // @dev Helper function to sets the branch Pool and target gas for hackathon use
+    function setBranchPool(address _branchPool, address _targetGas) public {
         branchPool = _branchPool;
+        targetGas = _targetGas;
     }
 
     function receiveWormholeMessages(
@@ -32,15 +32,19 @@ contract RootPool is IWormholeReceiver, BasePool {
         uint16, // source chain
         bytes32 deliveryHash
     ) external payable {
-        require(msg.sender == address(wormholeRelayer), "Only relayer allowed");
+        require(msg.sender == address(wormholeRelayer), "OnlyRelayer");
 
         // Ensure no duplicate deliveries
-        require(!seenDeliveryVaaHashes[deliveryHash], "Message already processed");
+        require(!seenDeliveryVaaHashes[deliveryHash], "MsgProcessed");
         seenDeliveryVaaHashes[deliveryHash] = true;
 
         (address receiver, uint256 amount) = abi.decode(payload, (address, uint256));
         
         bandwidth += amount;
+        depositToRelayer(receiver, amount);
+    }
+
+    function manualDepositToRelayer(address receiver, uint256 amount) payable external { 
         depositToRelayer(receiver, amount);
     }
 
@@ -51,5 +55,9 @@ contract RootPool is IWormholeReceiver, BasePool {
             IERC20(targetGas).approve(address(gelato1Balance), amount);
             gelato1Balance.depositToken(receiver, IERC20(targetGas), amount);
         }
+    }
+
+    function setGelato1Balance(address _gelato1Balance) external {
+        gelato1Balance = IGelato1Balance(_gelato1Balance);
     }
 }

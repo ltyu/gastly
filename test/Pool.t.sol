@@ -20,7 +20,7 @@ contract PoolTest is Test {
         mockWormholeRelayer = new MockWormholeRelayer();
         mockGelato1Balance = new MockGelato1Balance();
         rootPool = new RootPool(address(targetStable), address(mockWormholeRelayer), address(mockGelato1Balance));
-        branchPool = new BranchPool(address(targetStable), address(mockWormholeRelayer), 1);
+        branchPool = new BranchPool(address(targetStable), address(mockWormholeRelayer), address(0), 1);
 
         mockWormholeRelayer.setRootPool(address(rootPool));
         alice = address(7);
@@ -40,7 +40,7 @@ contract PoolTest is Test {
 
     function test_bridgeTargetStable() public {
         targetStable.approve(address(branchPool), 1 ether);
-        branchPool.bridgeGas(1 ether, alice);
+        branchPool.bridgeGas(1 ether, alice, 500000);
         assertEq(targetStable.balanceOf(address(branchPool)), 2 ether);
 
         assertEq(branchPool.bandwidth(), 0);
@@ -49,7 +49,7 @@ contract PoolTest is Test {
     function test_bridgeShouldIncreaseRootBandwidth() public {
         targetStable.approve(address(branchPool), 1 ether);
 
-        branchPool.bridgeGas(1 ether, alice);
+        branchPool.bridgeGas(1 ether, alice, 500000);
 
         assertEq(rootPool.bandwidth(), 2 ether);
     }
@@ -57,29 +57,65 @@ contract PoolTest is Test {
     function test_increaseGelato1Balance() public {
         targetStable.approve(address(branchPool), 1 ether);
 
-        branchPool.bridgeGas(1 ether, alice);
+        branchPool.bridgeGas(1 ether, alice, 500000);
         assertEq(mockGelato1Balance.totalDepositedAmount(alice, address(targetStable)), 1 ether);
     }
 
     function test_revertsOverBandwidth() public {
         targetStable.approve(address(branchPool), 1 ether);
 
-        vm.expectRevert("No bandwidth");
-        branchPool.bridgeGas(2 ether, alice);
+        vm.expectRevert("NoBandwidth");
+        branchPool.bridgeGas(2 ether, alice, 500000);
     }
 
     function test_revertsWithdrawLiquidityOnlyDeployer() public {
         vm.startPrank(alice);
         vm.expectRevert("onlyDeploy");
-        branchPool.withdrawLiquidity();
+        branchPool.withdrawLiquidity(alice);
         vm.stopPrank();
     }
 
     function test_withdrawLiquidity() public {
         uint256 balanceBefore = targetStable.balanceOf(address(this));
-        branchPool.withdrawLiquidity();
+        branchPool.withdrawLiquidity(address(this));
         uint256 balanceAfter = targetStable.balanceOf(address(this));
 
         assertEq(balanceBefore, balanceAfter - 1 ether);
+    }
+
+    function test_nativeGasRootMismatchAmount() public {
+        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1);
+        rootPool.setBranchPool(address(branchPool), address(0));
+
+        vm.expectRevert("NoDep");
+        rootPool.depositLiquidity{value: 6 ether}(5 ether);
+    }
+
+    function test_nativeGasRoot() public {
+        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1);
+        rootPool.setBranchPool(address(branchPool), address(0));
+
+        // Successfully deposits eth
+        uint256 balanceBefore = address(rootPool).balance;
+        rootPool.depositLiquidity{value: 5 ether}(5 ether);
+        uint256 balanceAfter = address(rootPool).balance;
+        assertEq(balanceBefore, balanceAfter - 5 ether);
+
+        branchPool.setBandwidth(5 ether);
+        branchPool.bridgeGas{value: 5 ether}(5 ether, alice, 500000);
+        assertEq(mockGelato1Balance.totalDepositedAmount(alice, address(0)), 5 ether);
+    }
+
+    function test_withdrawNativeLiquidity() public {
+        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1);
+        rootPool.setBranchPool(address(branchPool), address(0));
+
+        // Successfully deposits eth
+        branchPool.depositLiquidity{value: 5 ether}(5 ether);
+
+        uint256 balanceBefore = alice.balance;
+        branchPool.withdrawLiquidity(alice);
+        uint256 balanceAfter = alice.balance;
+        assertEq(balanceBefore, balanceAfter - 5 ether);
     }
 }

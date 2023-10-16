@@ -21,6 +21,5 @@ contract MockGelato1Balance is IGelato1Balance {
 
     function depositNative(address _sponsor) external payable {
         totalDepositedAmount[_sponsor][address(0)] += msg.value;
-        msg.sender.call{value: msg.value}("");
     }
 }

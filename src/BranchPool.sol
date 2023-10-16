@@ -8,55 +8,64 @@ import "./BasePool.sol";
 contract BranchPool is BasePool {
     using SafeERC20 for IERC20;
 
-    uint256 constant GAS_LIMIT = 50_000;
-
     // target pool contract
-    address immutable targetAddress;
+    address public immutable targetAddress;
 
     // target pool contract chain
-    uint16 immutable targetChain;
+    uint16 public immutable targetChain;
 
     // Relayer to send message cross chain
     IWormholeRelayer public immutable wormholeRelayer;
 
-    constructor(address _targetStable, address _wormholeRelayer, uint16 _targetChain) {
+    constructor(address _targetStable, address _wormholeRelayer, address _targetAddress, uint16 _targetChain) {
         targetGas = _targetStable;
         wormholeRelayer = IWormholeRelayer(_wormholeRelayer);
+        targetAddress = _targetAddress;
         targetChain = _targetChain;
+
+        // @dev hardcoded for now
+        bandwidth = 10 ether;
+    }
+
+    // @dev Helper function to sets the branch Pool and target gas for hackathon use
+    function setTargetGas(address _targetGas) public {
+        targetGas = _targetGas;
     }
 
     // Deposits the stable and credit the receiver cross-chain
-    function bridgeGas(uint256 _amount, address _receiver) external payable {
+    function bridgeGas(uint256 _amount, address _receiver, uint256 _gasLimit) external payable {
         // Check if theres enough bandwidth
-        require(bandwidth >= _amount, "No bandwidth");
+        require(bandwidth >= _amount, "NoBandwidth");
 
         // Calculate fee using root pool bandwidth
         // e.g. if utilization is 100%, require that the fee be 50%
-        _amount += calculateFee();
+        _amount += calculateFee(_amount);
 
         // Calculate crosschain delivery payment
-        (uint256 gasCost, ) = wormholeRelayer.quoteEVMDeliveryPrice(targetChain, 0, GAS_LIMIT);
-        require(msg.value >= gasCost);
+        (uint256 gasCost, ) = wormholeRelayer.quoteEVMDeliveryPrice(targetChain, 0, _gasLimit);
+        require(msg.value >= gasCost, "NoGas");
 
         bandwidth -= _amount;
 
         if (targetGas == address(0)) {
-            require(msg.value >= _amount);
+            require(msg.value >= _amount, "NoValue");
         } else {
             IERC20(targetGas).safeTransferFrom(msg.sender, address(this), _amount);
         }
 
-        bytes memory payload = abi.encode(_receiver, _amount);
         wormholeRelayer.sendPayloadToEvm{value: gasCost}(
             targetChain,
             targetAddress,
-            payload, // payload
+            abi.encode(_receiver, _amount), // payload
             0, // no receiver value needed since we're just passing a message
-            GAS_LIMIT
+            _gasLimit
         );
     }
 
+    // Fee curve based on RootPool utilization
     // @dev currently doesn't do anything for the hackathon to reduce token cost
-    function calculateFee() public returns (uint256) {
+    function calculateFee(uint256 _amount) public pure returns (uint256) {
+        return 0; 
     }
+    
 }
