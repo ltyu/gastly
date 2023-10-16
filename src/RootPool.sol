@@ -14,8 +14,8 @@ contract RootPool is IWormholeReceiver, BasePool {
     IGelato1Balance gelato1Balance;
     mapping(bytes32 => bool) seenDeliveryVaaHashes;
 
-    constructor(address _targetStable, address _wormholeRelayer, address _gelato1Balance) {
-        targetStable = IERC20(_targetStable);
+    constructor(address _targetGas, address _wormholeRelayer, address _gelato1Balance) {
+        targetGas = _targetGas;
         wormholeRelayer = _wormholeRelayer;
         gelato1Balance = IGelato1Balance(_gelato1Balance);
     }
@@ -38,14 +38,18 @@ contract RootPool is IWormholeReceiver, BasePool {
         require(!seenDeliveryVaaHashes[deliveryHash], "Message already processed");
         seenDeliveryVaaHashes[deliveryHash] = true;
 
-        (uint256 action, address receiver, uint256 amount) = abi.decode(payload, (uint256, address, uint256));
+        (address receiver, uint256 amount) = abi.decode(payload, (address, uint256));
         
         bandwidth += amount;
         depositToRelayer(receiver, amount);
     }
 
     function depositToRelayer(address receiver, uint256 amount) internal {
-        targetStable.approve(address(gelato1Balance), amount);
-        gelato1Balance.depositToken(receiver, targetStable, amount);
+        if (targetGas == address(0)) {
+            gelato1Balance.depositNative{value: amount}(receiver);
+        } else {
+            IERC20(targetGas).approve(address(gelato1Balance), amount);
+            gelato1Balance.depositToken(receiver, IERC20(targetGas), amount);
+        }
     }
 }

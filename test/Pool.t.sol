@@ -8,7 +8,7 @@ import {MockToken} from "../src/test/MockToken.sol";
 import {MockWormholeRelayer} from "../src/test/MockWormholeRelayer.sol";
 import {MockGelato1Balance} from "../src/test/MockGelato1Balance.sol";
 
-contract BranchPoolTest is Test {
+contract PoolTest is Test {
     RootPool rootPool;
     BranchPool branchPool;
     MockWormholeRelayer mockWormholeRelayer;
@@ -30,6 +30,9 @@ contract BranchPoolTest is Test {
 
         targetStable.approve(address(branchPool), 1 ether);
         branchPool.depositLiquidity(1 ether);
+
+        rootPool.setBandwidth(1 ether);
+        branchPool.setBandwidth(1 ether);
 
         assertEq(targetStable.balanceOf(address(branchPool)), 1 ether);
         assertEq(branchPool.assetAmount(), 1 ether);
@@ -63,5 +66,20 @@ contract BranchPoolTest is Test {
 
         vm.expectRevert("No bandwidth");
         branchPool.bridgeGas(2 ether, alice);
+    }
+
+    function test_revertsWithdrawLiquidityOnlyDeployer() public {
+        vm.startPrank(alice);
+        vm.expectRevert("onlyDeploy");
+        branchPool.withdrawLiquidity();
+        vm.stopPrank();
+    }
+
+    function test_withdrawLiquidity() public {
+        uint256 balanceBefore = targetStable.balanceOf(address(this));
+        branchPool.withdrawLiquidity();
+        uint256 balanceAfter = targetStable.balanceOf(address(this));
+
+        assertEq(balanceBefore, balanceAfter - 1 ether);
     }
 }

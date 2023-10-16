@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "wormhole-solidity-sdk/interfaces/IWormholeRelayer.sol";
 import "./BasePool.sol";
 
 // This is a pool contract used to hold USDC.
 contract BranchPool is BasePool {
+    using SafeERC20 for IERC20;
+
     uint256 constant GAS_LIMIT = 50_000;
 
     // target pool contract
@@ -17,7 +20,7 @@ contract BranchPool is BasePool {
     IWormholeRelayer public immutable wormholeRelayer;
 
     constructor(address _targetStable, address _wormholeRelayer, uint16 _targetChain) {
-        targetStable = IERC20(_targetStable);
+        targetGas = _targetStable;
         wormholeRelayer = IWormholeRelayer(_wormholeRelayer);
         targetChain = _targetChain;
     }
@@ -37,6 +40,12 @@ contract BranchPool is BasePool {
 
         bandwidth -= _amount;
 
+        if (targetGas == address(0)) {
+            require(msg.value >= _amount);
+        } else {
+            IERC20(targetGas).safeTransferFrom(msg.sender, address(this), _amount);
+        }
+
         bytes memory payload = abi.encode(_receiver, _amount);
         wormholeRelayer.sendPayloadToEvm{value: gasCost}(
             targetChain,
@@ -45,8 +54,6 @@ contract BranchPool is BasePool {
             0, // no receiver value needed since we're just passing a message
             GAS_LIMIT
         );
-
-        targetStable.transferFrom(msg.sender, address(this), _amount);
     }
 
     // @dev currently doesn't do anything for the hackathon to reduce token cost

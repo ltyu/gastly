@@ -7,4 +7,6 @@ interface IGelato1Balance {
         IERC20 _token,
         uint256 _amount
     ) external;
+
+    function depositNative(address _sponsor) external payable;
 }

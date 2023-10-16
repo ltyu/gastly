@@ -18,4 +18,9 @@ contract MockGelato1Balance is IGelato1Balance {
         // Assumes we have not hitelisted fee-on-transfer tokens
         _token.transferFrom(msg.sender, address(this), _amount);
     }
+
+    function depositNative(address _sponsor) external payable {
+        totalDepositedAmount[_sponsor][address(0)] += msg.value;
+        msg.sender.call{value: msg.value}("");
+    }
 }
