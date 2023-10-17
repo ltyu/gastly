@@ -40,7 +40,7 @@ contract PoolTest is Test {
 
     function test_bridgeGasToken() public {
         targetStable.approve(address(branchPool), 1 ether);
-        branchPool.bridgeGasToken(1 ether, alice, 500000);
+        branchPool.bridgeGasToken{ value: 1 ether }(1 ether, alice, 500000);
         assertEq(targetStable.balanceOf(address(branchPool)), 2 ether);
 
         assertEq(branchPool.bandwidth(), 0);
@@ -49,7 +49,7 @@ contract PoolTest is Test {
     function test_bridgeShouldIncreaseRootBandwidth() public {
         targetStable.approve(address(branchPool), 1 ether);
 
-        branchPool.bridgeGasToken(1 ether, alice, 500000);
+        branchPool.bridgeGasToken{ value: 1 ether }(1 ether, alice, 500000);
 
         assertEq(rootPool.bandwidth(), 2 ether);
     }
@@ -57,7 +57,7 @@ contract PoolTest is Test {
     function test_increaseGelato1Balance() public {
         targetStable.approve(address(branchPool), 1 ether);
 
-        branchPool.bridgeGasToken(1 ether, alice, 500000);
+        branchPool.bridgeGasToken{ value: 1 ether }(1 ether, alice, 500000);
         assertEq(mockGelato1Balance.totalDepositedAmount(alice, address(targetStable)), 1 ether);
     }
 
@@ -65,7 +65,7 @@ contract PoolTest is Test {
         targetStable.approve(address(branchPool), 1 ether);
 
         vm.expectRevert("NoBandwidth");
-        branchPool.bridgeGasToken(2 ether, alice, 500000);
+        branchPool.bridgeGasToken{ value: 1 ether }(2 ether, alice, 500000);
     }
 
     function test_revertsWithdrawLiquidityOnlyDeployer() public {
@@ -96,7 +96,7 @@ contract PoolTest is Test {
         rootPool.setBranchPool(address(branchPool), address(0));
 
         vm.expectRevert("WrongCall");
-        branchPool.bridgeGasToken(2 ether, alice, 500000);
+        branchPool.bridgeGasToken{ value: 1 ether }(2 ether, alice, 500000);
     }
 
     function test_nativeGasRoot() public {
@@ -110,8 +110,10 @@ contract PoolTest is Test {
         assertEq(balanceBefore, balanceAfter - 5 ether);
 
         branchPool.setBandwidth(5 ether);
-        branchPool.bridgeGas{value: 5 ether}(5 ether, alice, 500000);
-        assertEq(mockGelato1Balance.totalDepositedAmount(alice, address(0)), 5 ether);
+        branchPool.bridgeGas{value: 5 ether}(alice, 500000);
+
+        // Should be 4 ether because of gas costs
+        assertEq(mockGelato1Balance.totalDepositedAmount(alice, address(0)), 4 ether);
     }
 
     function test_withdrawNativeLiquidity() public {

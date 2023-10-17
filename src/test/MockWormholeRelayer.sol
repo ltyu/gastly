@@ -113,7 +113,9 @@ contract MockWormholeRelayer is IWormholeRelayer{
     function quoteEVMDeliveryPrice(uint16 targetChain, uint256 receiverValue, uint256 gasLimit)
         external
         view
-        returns (uint256 nativePriceQuote, uint256 targetChainRefundPerGasUnused) {}
+        returns (uint256 nativePriceQuote, uint256 targetChainRefundPerGasUnused) {
+            return (1 ether, 0);
+        }
 
     function quoteEVMDeliveryPrice(
         uint16 targetChain,

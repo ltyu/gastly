@@ -39,24 +39,24 @@ contract BranchPool is BasePool {
 
     /**
      * Bridges native token to the Root chain
-     * @param _amount how much to deposit into 1Balance on behalf of the receiver
      * @param _receiver address that will receive the 1Balance credit
      * @param _gasLimit gas limit to calculate the cost to execute the transaction on the Root
-     * @dev when using native gas, the msg.value will be expectedGas + amount to bridge
+     * @dev when using native gas, the msg.value will be expectedGas + amount to credit
      */
-    function bridgeGas(uint256 _amount, address _receiver, uint256 _gasLimit) external payable {
-        require(bandwidth >= _amount, "NoBandwidth");
+    function bridgeGas(address _receiver, uint256 _gasLimit) external payable {
         uint256 gasCost = quoteGasCost(_gasLimit);
+        uint256 amountToCredit = msg.value - gasCost;
+        require(bandwidth >= amountToCredit, "NoBandwidth");
 
-        _amount += calculateFee(_amount);
-        bandwidth -= _amount;
+        amountToCredit -= calculateFee(amountToCredit);
+        bandwidth -= amountToCredit;
 
-        require(msg.value >= _amount, "InsufficientValue");
+        require(msg.value >= amountToCredit, "InsufficientValue");
 
         wormholeRelayer.sendPayloadToEvm{value: gasCost}(
             targetChain,
             targetAddress,
-            abi.encode(_receiver, _amount), // payload
+            abi.encode(_receiver, amountToCredit), // payload
             0, // no receiver value needed since we're just passing a message
             _gasLimit
         );
@@ -70,10 +70,10 @@ contract BranchPool is BasePool {
      * @dev when using native gas, the msg.value will be expectedGas + amount to bridge
      */
     function bridgeGasToken(uint256 _amount, address _receiver, uint256 _gasLimit) external payable onlyTokenMode {
-        require(bandwidth >= _amount, "NoBandwidth");
         uint256 gasCost = quoteGasCost(_gasLimit);
+        require(bandwidth >= _amount, "NoBandwidth");
         
-        _amount += calculateFee(_amount);
+        _amount -= calculateFee(_amount);
         bandwidth -= _amount;
 
         IERC20(targetGas).safeTransferFrom(msg.sender, address(this), _amount);
