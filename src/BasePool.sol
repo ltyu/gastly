@@ -50,7 +50,7 @@ contract BasePool {
     }
 
     // @dev helper function to set bandwidth. only used during hackathon to reduce cross-chain gas cost.
-    function setBandwidth(uint256 _bandwidth) external {
+    function setBandwidth(uint256 _bandwidth) external onlyDeployer {
         bandwidth = _bandwidth;
     }
 }

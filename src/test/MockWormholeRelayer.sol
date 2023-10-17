@@ -20,12 +20,12 @@ contract MockWormholeRelayer is IWormholeRelayer{
     }
 
     function sendPayloadToEvm(
-        uint16 targetChain,
-        address targetAddress,
+        uint16,
+        address,
         bytes memory payload,
-        uint256 receiverValue,
-        uint256 gasLimit
-    ) external payable returns (uint64 sequence) {
+        uint256,
+        uint256
+    ) external payable returns (uint64) {
         bytes[] memory byteArray;
         rootPool.receiveWormholeMessages(payload, byteArray, keccak256(""), 1, keccak256(""));
     }

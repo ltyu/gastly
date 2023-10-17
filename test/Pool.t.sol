@@ -38,9 +38,9 @@ contract PoolTest is Test {
         assertEq(branchPool.assetAmount(), 1 ether);
     }
 
-    function test_bridgeTargetStable() public {
+    function test_bridgeGasToken() public {
         targetStable.approve(address(branchPool), 1 ether);
-        branchPool.bridgeGas(1 ether, alice, 500000);
+        branchPool.bridgeGasToken(1 ether, alice, 500000);
         assertEq(targetStable.balanceOf(address(branchPool)), 2 ether);
 
         assertEq(branchPool.bandwidth(), 0);
@@ -49,7 +49,7 @@ contract PoolTest is Test {
     function test_bridgeShouldIncreaseRootBandwidth() public {
         targetStable.approve(address(branchPool), 1 ether);
 
-        branchPool.bridgeGas(1 ether, alice, 500000);
+        branchPool.bridgeGasToken(1 ether, alice, 500000);
 
         assertEq(rootPool.bandwidth(), 2 ether);
     }
@@ -57,7 +57,7 @@ contract PoolTest is Test {
     function test_increaseGelato1Balance() public {
         targetStable.approve(address(branchPool), 1 ether);
 
-        branchPool.bridgeGas(1 ether, alice, 500000);
+        branchPool.bridgeGasToken(1 ether, alice, 500000);
         assertEq(mockGelato1Balance.totalDepositedAmount(alice, address(targetStable)), 1 ether);
     }
 
@@ -65,7 +65,7 @@ contract PoolTest is Test {
         targetStable.approve(address(branchPool), 1 ether);
 
         vm.expectRevert("NoBandwidth");
-        branchPool.bridgeGas(2 ether, alice, 500000);
+        branchPool.bridgeGasToken(2 ether, alice, 500000);
     }
 
     function test_revertsWithdrawLiquidityOnlyDeployer() public {
@@ -89,6 +89,14 @@ contract PoolTest is Test {
 
         vm.expectRevert("NoDep");
         rootPool.depositLiquidity{value: 6 ether}(5 ether);
+    }
+
+    function test_revertUsingWrongBridgeGasFunction() public {
+        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1);
+        rootPool.setBranchPool(address(branchPool), address(0));
+
+        vm.expectRevert("WrongCall");
+        branchPool.bridgeGasToken(2 ether, alice, 500000);
     }
 
     function test_nativeGasRoot() public {
