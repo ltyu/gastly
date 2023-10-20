@@ -31,11 +31,16 @@ contract PoolTest is Test {
         targetStable.approve(address(branchPool), 1 ether);
         branchPool.depositLiquidity(1 ether);
 
+        // @dev these are manually set for now
         rootPool.setBandwidth(1 ether);
         branchPool.setBandwidth(1 ether);
 
         assertEq(targetStable.balanceOf(address(branchPool)), 1 ether);
         assertEq(branchPool.assetAmount(), 1 ether);
+    }
+
+    function test_lPTokenMint() public {
+        assertEq(rootPool.balanceOf(address(this)), 1 ether);
     }
 
     function test_bridgeGasToken() public {

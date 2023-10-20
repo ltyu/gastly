@@ -3,12 +3,15 @@ pragma solidity ^0.8.13;
 import "wormhole-solidity-sdk/interfaces/IWormholeReceiver.sol";
 import "./BasePool.sol";
 import "./interface/IGelato1Balance.sol";
+import "./LPXToken.sol";
+
 /**
  * This is the contract that will accept a crosschain request to credit a user
  * It subsequently deposits to 1Balance
+ * 
+ * @dev This is also a Connext xToken
  */
-
-contract RootPool is IWormholeReceiver, BasePool {
+contract RootPool is IWormholeReceiver, BasePool, LPXToken {
     address public branchPool;
     address public wormholeRelayer;
     IGelato1Balance public gelato1Balance;
