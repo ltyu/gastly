@@ -3,7 +3,6 @@ pragma solidity ^0.8.13;
 import "wormhole-solidity-sdk/interfaces/IWormholeReceiver.sol";
 import "./BasePool.sol";
 import "./interface/IGelato1Balance.sol";
-import "./LPXToken.sol";
 
 /**
  * This is the contract that will accept a crosschain request to credit a user
@@ -11,16 +10,18 @@ import "./LPXToken.sol";
  * 
  * @dev This is also a Connext xToken
  */
-contract RootPool is IWormholeReceiver, BasePool, LPXToken {
+contract RootPool is IWormholeReceiver, BasePool {
+    // @dev branchPool should be mapping. For now, we only allow a single pool
     address public branchPool;
     address public wormholeRelayer;
     IGelato1Balance public gelato1Balance;
     mapping(bytes32 => bool) seenDeliveryVaaHashes;
 
-    constructor(address _targetGas, address _wormholeRelayer, address _gelato1Balance) {
+    constructor(address _targetGas, address _wormholeRelayer, address _gelato1Balance, address _lpXToken) BasePool(_lpXToken){
         targetGas = _targetGas;
         wormholeRelayer = _wormholeRelayer;
         gelato1Balance = IGelato1Balance(_gelato1Balance);
+        lpXToken = _lpXToken;
     }
     // @dev Helper function to sets the branch Pool and target gas for hackathon use
     function setBranchPool(address _branchPool, address _targetGas) public {

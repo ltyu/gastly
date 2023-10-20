@@ -17,7 +17,7 @@ contract BranchPool is BasePool {
     // Relayer to send message cross chain
     IWormholeRelayer public immutable wormholeRelayer;
 
-    constructor(address _targetGas, address _wormholeRelayer, address _targetAddress, uint16 _targetChain) {
+    constructor(address _targetGas, address _wormholeRelayer, address _targetAddress, uint16 _targetChain, address _lpXToken) BasePool(_lpXToken){
         targetGas = _targetGas;
         wormholeRelayer = IWormholeRelayer(_wormholeRelayer);
         targetAddress = _targetAddress;

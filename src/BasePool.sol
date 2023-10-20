@@ -2,9 +2,13 @@
 pragma solidity ^0.8.13;
 import "@openzeppelin/contracts/interfaces/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "xERC20/solidity/contracts/XERC20.sol";
 
 contract BasePool {
     using SafeERC20 for IERC20;
+
+    // The token that lps receive to allow them to bridge to other chains
+    address public immutable lpXToken;
 
     address public immutable deployer;
 
@@ -23,8 +27,9 @@ contract BasePool {
         _;
     }
 
-    constructor() {
+    constructor(address _lpXToken) {
         deployer = msg.sender;
+        lpXToken = _lpXToken;
     }
 
     function depositLiquidity(uint256 amount) payable external {
@@ -36,11 +41,19 @@ contract BasePool {
             IERC20(targetGas).safeTransferFrom(msg.sender, address(this), amount);
         }
 
+        XERC20(lpXToken).mint(msg.sender, amount);
+        
         // TODO Updates the other pool's lastKnownBandwidth
     }
 
+    // Withdraws and burn an amount of collateral
+    function withdrawLiquidty(uint256 amount) external {
+        assetAmount -= amount;
+        XERC20(lpXToken).burn(msg.sender, amount);
+    }
+
     // @dev helper function to withdraw all liquidity. only used during hackathon to reclaim tokens
-    function withdrawLiquidity(address receiver) external onlyDeployer {
+    function emergencyWithdrawLiquidity(address receiver) external onlyDeployer {
         if (targetGas == address(0)) { 
             (bool success, ) = receiver.call{ value: address(this).balance }("");
             require(success, "withdrawLiquidityFailed");

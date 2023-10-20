@@ -7,6 +7,8 @@ import {RootPool} from "../src/RootPool.sol";
 import {MockToken} from "../src/test/MockToken.sol";
 import {MockWormholeRelayer} from "../src/test/MockWormholeRelayer.sol";
 import {MockGelato1Balance} from "../src/test/MockGelato1Balance.sol";
+import {XERC20Factory} from "xERC20/solidity/contracts/XERC20Factory.sol";
+import {XERC20} from "xERC20/solidity/contracts/XERC20.sol";
 
 contract PoolTest is Test {
     RootPool rootPool;
@@ -14,13 +16,27 @@ contract PoolTest is Test {
     MockWormholeRelayer mockWormholeRelayer;
     MockToken targetStable;
     MockGelato1Balance mockGelato1Balance;
+    XERC20Factory xERC20Factory;
+    XERC20 xERC20;
     address alice;
     function setUp() public {
+        // Deploy xERC20 factory and xERC20
+        xERC20Factory = new XERC20Factory();
+        uint256[] memory _minterLimits = new uint256[](0);
+        uint256[] memory _burnerLimits = new uint256[](0);
+        address[] memory _minters = new address[](0);
+        
+        xERC20 = XERC20(xERC20Factory.deployXERC20('Test', 'TST', _minterLimits, _burnerLimits, _minters));
+        // Everything else
         targetStable = new MockToken();
         mockWormholeRelayer = new MockWormholeRelayer();
         mockGelato1Balance = new MockGelato1Balance();
-        rootPool = new RootPool(address(targetStable), address(mockWormholeRelayer), address(mockGelato1Balance));
-        branchPool = new BranchPool(address(targetStable), address(mockWormholeRelayer), address(0), 1);
+        rootPool = new RootPool(address(targetStable), address(mockWormholeRelayer), address(mockGelato1Balance), address(xERC20));
+        branchPool = new BranchPool(address(targetStable), address(mockWormholeRelayer), address(0), 1, address(xERC20));
+        
+        // Set xERC20 limits
+        xERC20.setLimits(address(rootPool), 10 ether, 10 ether);
+        xERC20.setLimits(address(branchPool), 10 ether, 10 ether);
 
         mockWormholeRelayer.setRootPool(address(rootPool));
         alice = address(7);
@@ -39,8 +55,8 @@ contract PoolTest is Test {
         assertEq(branchPool.assetAmount(), 1 ether);
     }
 
-    function test_lPTokenMint() public {
-        assertEq(rootPool.balanceOf(address(this)), 1 ether);
+    function test_lpXTokenMint() public {
+        assertEq(xERC20.balanceOf(address(this)), 2 ether);
     }
 
     function test_bridgeGasToken() public {
@@ -76,20 +92,20 @@ contract PoolTest is Test {
     function test_revertsWithdrawLiquidityOnlyDeployer() public {
         vm.startPrank(alice);
         vm.expectRevert("onlyDeploy");
-        branchPool.withdrawLiquidity(alice);
+        branchPool.emergencyWithdrawLiquidity(alice);
         vm.stopPrank();
     }
 
     function test_withdrawLiquidity() public {
         uint256 balanceBefore = targetStable.balanceOf(address(this));
-        branchPool.withdrawLiquidity(address(this));
+        branchPool.emergencyWithdrawLiquidity(address(this));
         uint256 balanceAfter = targetStable.balanceOf(address(this));
 
         assertEq(balanceBefore, balanceAfter - 1 ether);
     }
 
     function test_nativeGasRootMismatchAmount() public {
-        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1);
+        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1, address(xERC20));
         rootPool.setBranchPool(address(branchPool), address(0));
 
         vm.expectRevert("NoDep");
@@ -97,7 +113,7 @@ contract PoolTest is Test {
     }
 
     function test_revertUsingWrongBridgeGasFunction() public {
-        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1);
+        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1, address(xERC20));
         rootPool.setBranchPool(address(branchPool), address(0));
 
         vm.expectRevert("WrongCall");
@@ -105,7 +121,7 @@ contract PoolTest is Test {
     }
 
     function test_nativeGasRoot() public {
-        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1);
+        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1, address(xERC20));
         rootPool.setBranchPool(address(branchPool), address(0));
 
         // Successfully deposits eth
@@ -122,14 +138,15 @@ contract PoolTest is Test {
     }
 
     function test_withdrawNativeLiquidity() public {
-        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1);
+        branchPool = new BranchPool(address(0), address(mockWormholeRelayer), address(0), 1, address(xERC20));
         rootPool.setBranchPool(address(branchPool), address(0));
+        xERC20.setLimits(address(branchPool), 10 ether, 10 ether);
 
         // Successfully deposits eth
         branchPool.depositLiquidity{value: 5 ether}(5 ether);
 
         uint256 balanceBefore = alice.balance;
-        branchPool.withdrawLiquidity(alice);
+        branchPool.emergencyWithdrawLiquidity(alice);
         uint256 balanceAfter = alice.balance;
         assertEq(balanceBefore, balanceAfter - 5 ether);
     }
