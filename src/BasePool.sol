@@ -50,6 +50,9 @@ contract BasePool {
     function withdrawLiquidty(uint256 amount) external {
         assetAmount -= amount;
         XERC20(lpXToken).burn(msg.sender, amount);
+
+        (bool success, ) = address(msg.sender).call{value: amount}("");
+        require(success, "WithdrawFail");
     }
 
     // @dev helper function to withdraw all liquidity. only used during hackathon to reclaim tokens
