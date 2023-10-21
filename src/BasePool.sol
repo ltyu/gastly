@@ -50,7 +50,8 @@ contract BasePool {
     function withdrawLiquidty(uint256 amount) external {
         assetAmount -= amount;
         XERC20(lpXToken).burn(msg.sender, amount);
-
+        
+        // @dev this only handles native token transfer for now
         (bool success, ) = address(msg.sender).call{value: amount}("");
         require(success, "WithdrawFail");
     }
